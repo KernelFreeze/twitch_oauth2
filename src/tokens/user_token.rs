@@ -370,7 +370,7 @@ impl UserTokenBuilder {
         if let Some(stored_csrf) = &self.csrf {
             stored_csrf.secret() == csrf
         } else {
-            true
+            false
         }
     }
 
@@ -440,16 +440,11 @@ impl UserTokenBuilder {
     pub async fn get_user_token<'a, C>(
         self,
         http_client: &'a C,
-        state: &str,
         code: &str,
     ) -> Result<UserToken, UserTokenExchangeError<<C as Client>::Error>>
     where
         C: Client,
     {
-        if !self.csrf_is_valid(state) {
-            return Err(UserTokenExchangeError::StateMismatch);
-        }
-
         let req = self.get_user_token_request(code);
 
         let resp = http_client
@@ -743,8 +738,13 @@ mod tests {
         )
         .force_verify(true);
         t.csrf = Some(crate::CsrfToken::from("random"));
+
+        if !t.csrf_is_valid("random") {
+            panic!("csrf token is not valid");
+        }
+        
         let token = t
-            .get_user_token(&surf::Client::new(), "random", "authcode")
+            .get_user_token(&surf::Client::new(), "authcode")
             .await
             .unwrap();
         println!("token: {:?} - {}", token, token.access_token.secret());
