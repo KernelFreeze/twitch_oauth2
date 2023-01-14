@@ -305,7 +305,7 @@ impl UserTokenBuilder {
     ) -> UserTokenBuilder {
         UserTokenBuilder {
             scopes: vec![],
-            csrf: None,
+            csrf: Some(crate::types::CsrfToken::new_random()),
             force_verify: false,
             redirect_url,
             client_id: client_id.into(),
@@ -320,7 +320,10 @@ impl UserTokenBuilder {
     }
 
     /// Add a single scope to request
-    pub fn add_scope(&mut self, scope: Scope) { self.scopes.push(scope); }
+    pub fn add_scope(mut self, scope: Scope) -> Self {
+        self.scopes.push(scope);
+        self
+    }
 
     /// Enable or disable function to make the user able to switch accounts if needed.
     pub fn force_verify(mut self, b: bool) -> Self {
@@ -328,20 +331,26 @@ impl UserTokenBuilder {
         self
     }
 
+    /// Set the CSRF token.
+    pub fn set_csrf(mut self, csrf: Option<crate::types::CsrfToken>) -> Self {
+        self.csrf = csrf;
+        self
+    }
+
     /// Generate the URL to request a code.
     ///
     /// Step 1. in the [guide](https://dev.twitch.tv/docs/authentication/getting-tokens-oauth/#oauth-authorization-code-flow)
-    pub fn generate_url(&mut self) -> (url::Url, crate::types::CsrfToken) {
-        let csrf = crate::types::CsrfToken::new_random();
-        self.csrf = Some(csrf.clone());
+    pub fn generate_url(&mut self) -> url::Url {
         let mut url = crate::AUTH_URL.clone();
-
-        let auth = vec![
+        let mut auth = vec![
             ("response_type", "code"),
             ("client_id", self.client_id.as_str()),
             ("redirect_uri", self.redirect_url.as_str()),
-            ("state", csrf.as_str()),
         ];
+
+        if let Some(csrf) = &self.csrf {
+            auth.push(("state", csrf.secret()));
+        }
 
         url.query_pairs_mut().extend_pairs(auth);
 
@@ -353,22 +362,15 @@ impl UserTokenBuilder {
         if self.force_verify {
             url.query_pairs_mut().append_pair("force_verify", "true");
         };
-
-        (url, csrf)
+        url
     }
-
-    /// Set the CSRF token.
-    ///
-    /// Hidden because you should preferably not use this.
-    #[doc(hidden)]
-    pub fn set_csrf(&mut self, csrf: crate::types::CsrfToken) { self.csrf = Some(csrf); }
 
     /// Check if the CSRF is valid
     pub fn csrf_is_valid(&self, csrf: &str) -> bool {
-        if let Some(csrf2) = &self.csrf {
-            csrf2.secret() == csrf
+        if let Some(stored_csrf) = &self.csrf {
+            stored_csrf.secret() == csrf
         } else {
-            false
+            true
         }
     }
 
@@ -439,7 +441,6 @@ impl UserTokenBuilder {
         self,
         http_client: &'a C,
         state: &str,
-        // TODO: Should be either str or AuthorizationCode
         code: &str,
     ) -> Result<UserToken, UserTokenExchangeError<<C as Client>::Error>>
     where
