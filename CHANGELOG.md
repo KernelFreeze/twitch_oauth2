@@ -4,7 +4,41 @@
 
 ## [Unreleased] - ReleaseDate
 
-[Commits](https://github.com/twitch-rs/twitch_oauth2/compare/v0.10.0...Unreleased)
+[Commits](https://github.com/twitch-rs/twitch_oauth2/compare/v0.11.1...Unreleased)
+
+### Added
+
+- Added `moderator:read:followers` scope
+- Added `Scope::all_slice`, `Scope::as_static_str` to do const operations
+
+### Changed
+
+- Made `Scope::description` const
+
+### Changed
+
+- Marked `user:edit:follows` as deprecated
+
+## [v0.11.1] - 2023-02-01
+
+[Commits](https://github.com/twitch-rs/twitch_oauth2/compare/v0.11.0...v0.11.1)
+
+### Added
+
+- Added scopes for shoutouts
+
+### Changed
+
+- Marked `channel_subscriptions` as deprecated.
+
+## [v0.11.0] - 2023-01-24
+
+[Commits](https://github.com/twitch-rs/twitch_oauth2/compare/v0.10.0...v0.11.0)
+
+### Breaking
+
+- Updated `twitch_types` to `0.4.0`
+- MSRV bumped to ``1.66.1`
 
 ## [v0.10.0] - 2022-12-19
 
